@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PASHION</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: #0D0D0D; font-family: Georgia, serif; color: #F0EDE8; }
+    ::-webkit-scrollbar { display: none; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.3)} 100%{transform:scale(1)} }
+    input, textarea, select { -webkit-appearance: none; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+const { useState } = React;
+
+const SEED_POSTS = [
+  {
+    id: 1, userId: "sofia_m", userName: "Sofia M.", userAvatar: "🧖‍♀️",
+    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80",
+    caption: "Monday fit — clean lines, kein Drama 🤍",
+    likes: 284, liked: false,
+    tags: ["#minimal", "#ootd", "#zara"],
+    items: [
+      { name: "Linen Oversized Blazer", store: "Zara", price: "89", emoji: "🧥", link: "#" },
+      { name: "Wide Leg Trousers", store: "H&M", price: "34", emoji: "👖", link: "#" },
+      { name: "Leather Mule", store: "ASOS", price: "55", emoji: "👠", link: "#" },
+    ],
+  },
+  {
+    id: 2, userId: "nina_k", userName: "Nina K.", userAvatar: "💁‍♀️",
+    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=400&q=80",
+    caption: "Cargo season never ends 🖤",
+    likes: 512, liked: false,
+    tags: ["#streetwear", "#urban", "#pullandbear"],
+    items: [
+      { name: "Graphic Crop Hoodie", store: "ASOS", price: "42", emoji: "👕", link: "#" },
+      { name: "Cargo Pants", store: "Pull&Bear", price: "38", emoji: "👖", link: "#" },
+      { name: "Platform Sneakers", store: "Zalando", price: "75", emoji: "👟", link: "#" },
+      { name: "Chain Crossbody Bag", store: "Zara", price: "29", emoji: "👜", link: "#" },
+    ],
+  },
+  {
+    id: 3, userId: "lea_b", userName: "Lea B.", userAvatar: "🌸",
+    image: "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=400&q=80",
+    caption: "Summer breeze in this wrap dress 🌿",
+    likes: 198, liked: false,
+    tags: ["#boho", "#cottagecore", "#summerstyle"],
+    items: [
+      { name: "Floral Wrap Dress", store: "& Other Stories", price: "95", emoji: "👗", link: "#" },
+      { name: "Raffia Hat", store: "H&M", price: "22", emoji: "👒", link: "#" },
+      { name: "Leather Sandals", store: "Mango", price: "65", emoji: "👡", link: "#" },
+    ],
+  },
+];
+
+const STORES = ["Zara","H&M","ASOS","Mango","Pull&Bear","Zalando","& Other Stories","Andere"];
+const EMOJIS = ["👗","👖","👕","🧥","👠","👟","👡","👜","🎩","👒","💍","🧣"];
+const AVATARS = ["😊","🧖‍♀️","💁‍♀️","🌸","🦋","✨","🎀","🌿","💫","🔥","🎭","👑"];
+
+const Avatar = ({ emoji, size = 40, ring = false }) => (
+  <div style={{
+    width: size, height: size, borderRadius: "50%",
+    background: "linear-gradient(135deg, #f5e6d3, #e8c9a0)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: size * 0.45, border: ring ? "2.5px solid #F0EDE8" : "none", flexShrink: 0,
+  }}>{emoji}</div>
+);
+
+const Inp = ({ label, value, onChange, placeholder, type="text" }) => (
+  <div style={{ marginBottom: 12 }}>
+    <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontFamily: "sans-serif", marginBottom: 6 }}>{label.toUpperCase()}</div>
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      style={{ width: "100%", background: "#111", border: "1px solid #222", borderRadius: 10,
+        padding: "11px 14px", color: "#F0EDE8", fontFamily: "Georgia,serif", fontSize: 14, outline: "none" }} />
+  </div>
+);
+
+const Btn = ({ label, onClick, disabled, full=true }) => (
+  <button onClick={onClick} disabled={disabled} style={{
+    width: full ? "100%" : "auto", padding: "14px 20px",
+    background: disabled ? "#1A1A1A" : "#F0EDE8",
+    color: disabled ? "#444" : "#0D0D0D", border: "none", borderRadius: 12,
+    fontFamily: "sans-serif", fontSize: 11, letterSpacing: 2,
+    cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
+  }}>{label}</button>
+);
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+function Onboarding({ onDone }) {
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState({ name: "", username: "", bio: "", avatar: "😊" });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 28px" }}>
+      <div style={{ marginBottom: 48, animation: "fadeUp 0.5s ease" }}>
+        <div style={{ fontSize: 11, letterSpacing: 5, color: "#888", marginBottom: 8, fontFamily: "sans-serif" }}>WELCOME TO</div>
+        <div style={{ fontSize: 48, fontWeight: 400, letterSpacing: -2 }}>PASHION</div>
+        <div style={{ fontSize: 13, color: "#555", marginTop: 8, fontFamily: "sans-serif" }}>Wear it. Post it. Shop it.</div>
+      </div>
+
+      {step === 0 && (
+        <div style={{ animation: "fadeUp 0.4s ease" }}>
+          <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, marginBottom: 16, fontFamily: "sans-serif" }}>WÄHLE DEINEN AVATAR</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 28 }}>
+            {AVATARS.map(a => (
+              <button key={a} onClick={() => set("avatar", a)} style={{
+                width: 52, height: 52, borderRadius: "50%",
+                background: form.avatar === a ? "#F0EDE8" : "#1A1A1A",
+                border: form.avatar === a ? "none" : "1px solid #2A2A2A",
+                fontSize: 24, cursor: "pointer", transition: "all 0.15s",
+              }}>{a}</button>
+            ))}
+          </div>
+          <Btn label="WEITER →" onClick={() => setStep(1)} />
+        </div>
+      )}
+
+      {step === 1 && (
+        <div style={{ animation: "fadeUp 0.4s ease" }}>
+          <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, marginBottom: 16, fontFamily: "sans-serif" }}>DEIN PROFIL</div>
+          <Inp label="Name" value={form.name} onChange={v => set("name", v)} placeholder="z.B. Sofia M." />
+          <Inp label="Username" value={form.username} onChange={v => set("username", v.replace(/\s/g,"_").toLowerCase())} placeholder="z.B. sofia_m" />
+          <Inp label="Bio" value={form.bio} onChange={v => set("bio", v)} placeholder="Dein Style in einem Satz..." />
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button onClick={() => setStep(0)} style={{ flex: 1, padding: "14px", background: "none", border: "1px solid #2A2A2A", borderRadius: 12, color: "#666", fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer" }}>← ZURÜCK</button>
+            <button onClick={() => form.name && form.username && onDone(form)} disabled={!form.name || !form.username} style={{
+              flex: 2, padding: "14px",
+              background: form.name && form.username ? "#F0EDE8" : "#1A1A1A",
+              color: form.name && form.username ? "#0D0D0D" : "#444",
+              border: "none", borderRadius: 12, fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2,
+              cursor: form.name && form.username ? "pointer" : "default",
+            }}>LOSLEGEN ✦</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── POST CARD ─────────────────────────────────────────────────────────────────
+function PostCard({ post, onLike, onOpen, onProfile, idx }) {
+  const [shop, setShop] = useState(false);
+  const total = post.items.reduce((s, i) => s + parseInt(i.price), 0);
+  return (
+    <div style={{ marginBottom: 2, animation: `fadeUp 0.4s ease ${idx * 0.08}s both` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px" }}>
+        <div onClick={() => onProfile(post.userId)} style={{ cursor: "pointer" }}><Avatar emoji={post.userAvatar} size={34} /></div>
+        <div style={{ flex: 1 }}>
+          <div onClick={() => onProfile(post.userId)} style={{ fontSize: 13, cursor: "pointer" }}>{post.userName}</div>
+          <div style={{ fontSize: 10, color: "#555", fontFamily: "sans-serif" }}>{post.tags[0]}</div>
+        </div>
+        <button onClick={() => setShop(s => !s)} style={{
+          background: shop ? "#F0EDE8" : "#1A1A1A", color: shop ? "#0D0D0D" : "#F0EDE8",
+          border: "1px solid #2A2A2A", borderRadius: 20, padding: "5px 12px",
+          fontSize: 9, fontFamily: "sans-serif", letterSpacing: 1.5, cursor: "pointer", transition: "all 0.2s",
+        }}>{shop ? "✕ CLOSE" : `SHOP · ${total}€`}</button>
+      </div>
+
+      <div onClick={onOpen} style={{ cursor: "pointer", position: "relative" }}>
+        <img src={post.image} alt="" style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover", display: "block" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "40%", background: "linear-gradient(transparent, rgba(13,13,13,0.85))" }} />
+        <div style={{ position: "absolute", bottom: 14, left: 16, right: 16, fontSize: 13, lineHeight: 1.4 }}>{post.caption}</div>
+      </div>
+
+      {shop && (
+        <div style={{ background: "#111", padding: "12px 16px", animation: "fadeUp 0.2s ease" }}>
+          <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 10 }}>OUTFIT VON {post.userName.toUpperCase()}</div>
+          {post.items.map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #1A1A1A" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 22 }}>{item.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 12 }}>{item.name}</div>
+                  <div style={{ fontSize: 10, color: "#666", fontFamily: "sans-serif" }}>{item.store}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, fontFamily: "sans-serif" }}>{item.price}€</span>
+                <a href={item.link} style={{ background: "#F0EDE8", color: "#0D0D0D", borderRadius: 8, padding: "4px 10px", fontSize: 9, fontFamily: "sans-serif", letterSpacing: 1.5, textDecoration: "none" }}>KAUFEN</a>
+              </div>
+            </div>
+          ))}
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 0" }}>
+            <span style={{ fontSize: 11, color: "#888", fontFamily: "sans-serif" }}>Gesamt</span>
+            <span style={{ fontSize: 16 }}>{total}€</span>
+          </div>
+          <button style={{ width: "100%", marginTop: 10, padding: "13px", background: "#F0EDE8", color: "#0D0D0D", border: "none", borderRadius: 10, fontSize: 10, fontFamily: "sans-serif", letterSpacing: 2, cursor: "pointer" }}>
+            ALLES KAUFEN · {total}€
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 16, padding: "10px 16px", alignItems: "center" }}>
+        <button onClick={() => onLike(post.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 6, color: post.liked ? "#e8507a" : "#666", transition: "color 0.2s" }}>
+          <span style={{ fontSize: 20 }}>{post.liked ? "♥" : "♡"}</span>
+          <span style={{ fontSize: 11, fontFamily: "sans-serif" }}>{post.likes}</span>
+        </button>
+        <button onClick={onOpen} style={{ background: "none", border: "none", cursor: "pointer", color: "#555", fontSize: 18 }}>💬</button>
+      </div>
+    </div>
+  );
+}
+
+// ── POST CREATOR ──────────────────────────────────────────────────────────────
+function PostCreator({ user, onPublish, onBack }) {
+  const [step, setStep] = useState(0);
+  const [imgUrl, setImgUrl] = useState("");
+  const [caption, setCaption] = useState("");
+  const [tags, setTags] = useState("");
+  const [items, setItems] = useState([{ name: "", store: "Zara", price: "", emoji: "👗", link: "#" }]);
+
+  const updItem = (i, k, v) => setItems(arr => arr.map((it, j) => j === i ? { ...it, [k]: v } : it));
+
+  const publish = () => {
+    onPublish({
+      id: Date.now(), userId: user.username, userName: user.name, userAvatar: user.avatar,
+      image: imgUrl || "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&q=80",
+      caption, likes: 0, liked: false,
+      tags: tags.split(" ").filter(Boolean).map(t => t.startsWith("#") ? t : "#" + t),
+      items: items.filter(i => i.name),
+    });
+  };
+
+  return (
+    <div style={{ paddingBottom: 40, animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "44px 16px 20px" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer" }}>✕</button>
+        <div>
+          <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif" }}>NEUER POST</div>
+          <div style={{ fontSize: 22 }}>Dein Outfit</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 4, padding: "0 16px 20px" }}>
+        {[0,1,2].map(i => <div key={i} style={{ flex: 1, height: 2, background: i <= step ? "#F0EDE8" : "#1A1A1A", borderRadius: 2, transition: "background 0.3s" }} />)}
+      </div>
+      <div style={{ padding: "0 16px" }}>
+        {step === 0 && (
+          <div style={{ animation: "fadeUp 0.3s ease" }}>
+            <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 16 }}>SCHRITT 1 · FOTO URL</div>
+            <Inp label="Foto URL" value={imgUrl} onChange={setImgUrl} placeholder="https://images.unsplash.com/..." />
+            {imgUrl
+              ? <img src={imgUrl} alt="" style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover", borderRadius: 16, marginBottom: 16 }} onError={e => e.target.style.display="none"} />
+              : <div style={{ background: "#111", borderRadius: 16, aspectRatio: "4/5", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginBottom: 16, gap: 8 }}>
+                  <span style={{ fontSize: 40 }}>📸</span>
+                  <span style={{ fontSize: 10, color: "#555", fontFamily: "sans-serif" }}>Foto URL eingeben</span>
+                </div>}
+            <Btn label="WEITER →" onClick={() => setStep(1)} />
+          </div>
+        )}
+        {step === 1 && (
+          <div style={{ animation: "fadeUp 0.3s ease" }}>
+            <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 16 }}>SCHRITT 2 · OUTFIT TEILE</div>
+            {items.map((item, idx) => (
+              <div key={idx} style={{ background: "#111", borderRadius: 16, padding: 14, marginBottom: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 10, color: "#888", fontFamily: "sans-serif" }}>TEIL {idx + 1}</span>
+                  {idx > 0 && <button onClick={() => setItems(a => a.filter((_,j)=>j!==idx))} style={{ background: "none", border: "none", color: "#555", cursor: "pointer", fontSize: 16 }}>✕</button>}
+                </div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                  {EMOJIS.map(e => (
+                    <button key={e} onClick={() => updItem(idx, "emoji", e)} style={{ background: item.emoji === e ? "#F0EDE8" : "#1A1A1A", border: "none", borderRadius: 8, width: 32, height: 32, fontSize: 16, cursor: "pointer" }}>{e}</button>
+                  ))}
+                </div>
+                <Inp label="Produktname" value={item.name} onChange={v => updItem(idx, "name", v)} placeholder="z.B. Linen Blazer" />
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ flex: 2 }}>
+                    <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontFamily: "sans-serif", marginBottom: 6 }}>STORE</div>
+                    <select value={item.store} onChange={e => updItem(idx, "store", e.target.value)} style={{ width: "100%", background: "#0D0D0D", color: "#F0EDE8", border: "1px solid #222", borderRadius: 10, padding: "10px 12px", fontFamily: "sans-serif", fontSize: 12, marginBottom: 10 }}>
+                      {STORES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}><Inp label="Preis €" value={item.price} onChange={v => updItem(idx, "price", v)} placeholder="59" /></div>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setItems(a => [...a, { name: "", store: "Zara", price: "", emoji: "👗", link: "#" }])} style={{ width: "100%", padding: "12px", background: "none", border: "1px dashed #2A2A2A", borderRadius: 12, color: "#555", fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer", marginBottom: 16 }}>+ TEIL HINZUFÜGEN</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setStep(0)} style={{ flex: 1, padding: "13px", background: "none", border: "1px solid #1A1A1A", borderRadius: 12, color: "#888", fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer" }}>←</button>
+              <button onClick={() => setStep(2)} style={{ flex: 2, padding: "13px", background: "#F0EDE8", color: "#0D0D0D", border: "none", borderRadius: 12, fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer" }}>WEITER →</button>
+            </div>
+          </div>
+        )}
+        {step === 2 && (
+          <div style={{ animation: "fadeUp 0.3s ease" }}>
+            <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 16 }}>SCHRITT 3 · CAPTION & TAGS</div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontFamily: "sans-serif", marginBottom: 6 }}>CAPTION</div>
+              <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Beschreibe deinen Look..." rows={3}
+                style={{ width: "100%", background: "#111", border: "1px solid #1A1A1A", borderRadius: 12, padding: "12px 14px", color: "#F0EDE8", fontFamily: "Georgia,serif", fontSize: 14, resize: "none", outline: "none" }} />
+            </div>
+            <Inp label="Tags (mit Leerzeichen)" value={tags} onChange={setTags} placeholder="#ootd #minimal #zara" />
+            <div style={{ background: "#111", borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontFamily: "sans-serif", marginBottom: 6 }}>ZUSAMMENFASSUNG</div>
+              <div style={{ fontSize: 12, color: "#888", fontFamily: "sans-serif" }}>{items.filter(i=>i.name).length} Teile · {items.filter(i=>i.name).reduce((s,i)=>s+parseInt(i.price||0),0)}€</div>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: "13px", background: "none", border: "1px solid #1A1A1A", borderRadius: 12, color: "#888", fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer" }}>←</button>
+              <button onClick={publish} style={{ flex: 2, padding: "13px", background: "#F0EDE8", color: "#0D0D0D", border: "none", borderRadius: 12, fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer" }}>POSTEN ✦</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── PROFILE ───────────────────────────────────────────────────────────────────
+function Profile({ userId, posts, currentUser, onPost, onBack, isOwn, onNav }) {
+  const userPosts = posts.filter(p => p.userId === userId);
+  const name = isOwn ? currentUser.name : (userPosts[0]?.userName || userId);
+  const avatar = isOwn ? currentUser.avatar : (userPosts[0]?.userAvatar || "😊");
+  const bio = isOwn ? currentUser.bio : "Fashion lover ✨";
+  const totalLikes = userPosts.reduce((s, p) => s + p.likes, 0);
+
+  return (
+    <div style={{ paddingBottom: 100, animation: "fadeIn 0.3s ease" }}>
+      <div style={{ padding: "44px 16px 0" }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer", marginBottom: 20 }}>←</button>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 20 }}>
+          <Avatar emoji={avatar} size={72} ring={isOwn} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 22 }}>{name}</div>
+            <div style={{ fontSize: 11, color: "#666", fontFamily: "sans-serif", marginBottom: 8 }}>@{userId}</div>
+            <div style={{ fontSize: 12, color: "#999", lineHeight: 1.4 }}>{bio || "Fashion lover ✨"}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", background: "#111", borderRadius: 16, padding: "16px 0", marginBottom: 20 }}>
+          {[["POSTS", userPosts.length], ["LIKES", totalLikes], ["TEILE", userPosts.reduce((s,p)=>s+p.items.length,0)]].map(([l, v], i) => (
+            <div key={l} style={{ flex: 1, textAlign: "center", borderRight: i < 2 ? "1px solid #1A1A1A" : "none" }}>
+              <div style={{ fontSize: 24 }}>{v}</div>
+              <div style={{ fontSize: 8, color: "#555", letterSpacing: 2, fontFamily: "sans-serif" }}>{l}</div>
+            </div>
+          ))}
+        </div>
+        {isOwn && <button onClick={() => onNav("post")} style={{ width: "100%", padding: "13px", background: "#1A1A1A", border: "1px solid #2A2A2A", borderRadius: 12, color: "#F0EDE8", fontFamily: "sans-serif", fontSize: 10, letterSpacing: 2, cursor: "pointer", marginBottom: 20 }}>+ OUTFIT POSTEN</button>}
+        <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 12 }}>OUTFITS</div>
+      </div>
+      {userPosts.length === 0
+        ? <div style={{ textAlign: "center", padding: "60px 0", color: "#333" }}><div style={{ fontSize: 40 }}>👗</div><div style={{ fontFamily: "sans-serif", fontSize: 11, marginTop: 8, letterSpacing: 1 }}>Noch keine Posts</div></div>
+        : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: "0 2px" }}>
+            {userPosts.map(post => (
+              <div key={post.id} onClick={() => onPost(post)} style={{ cursor: "pointer", position: "relative" }}>
+                <img src={post.image} alt="" style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block" }} />
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent,rgba(13,13,13,0.85))", padding: "20px 8px 8px" }}>
+                  <div style={{ fontSize: 9, fontFamily: "sans-serif", color: "#ddd" }}>{post.items.reduce((s,i)=>s+parseInt(i.price),0)}€</div>
+                </div>
+              </div>
+            ))}
+          </div>}
+    </div>
+  );
+}
+
+// ── BOTTOM NAV ────────────────────────────────────────────────────────────────
+function BottomNav({ active, onNav }) {
+  const tabs = [
+    { id: "feed", icon: "⌂", label: "HOME" },
+    { id: "explore", icon: "◎", label: "EXPLORE" },
+    { id: "post", icon: "✦", label: "POST", special: true },
+    { id: "myprofile", icon: "◉", label: "PROFIL" },
+  ];
+  return (
+    <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: "rgba(13,13,13,0.96)", backdropFilter: "blur(16px)", borderTop: "1px solid #1A1A1A", display: "flex", zIndex: 50 }}>
+      {tabs.map(tab => (
+        <button key={tab.id} onClick={() => onNav(tab.id)} style={{ flex: 1, padding: "12px 0 16px", background: "none", border: "none", cursor: "pointer", color: active === tab.id ? "#F0EDE8" : "#444", transition: "color 0.2s" }}>
+          {tab.special
+            ? <div style={{ width: 40, height: 40, borderRadius: "50%", background: active === "post" ? "#F0EDE8" : "#1A1A1A", border: "1px solid #2A2A2A", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 2px", color: active === "post" ? "#0D0D0D" : "#F0EDE8", fontSize: 18, transition: "all 0.2s" }}>{tab.icon}</div>
+            : <div style={{ fontSize: 20, marginBottom: 2 }}>{tab.icon}</div>}
+          <div style={{ fontSize: 7, letterSpacing: 1.5, fontFamily: "sans-serif" }}>{tab.label}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── MAIN APP ──────────────────────────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = useState("onboarding");
+  const [user, setUser] = useState(null);
+  const [posts, setPosts] = useState(SEED_POSTS);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [profileId, setProfileId] = useState(null);
+
+  const toggleLike = id => setPosts(p => p.map(x => x.id === id ? { ...x, liked: !x.liked, likes: x.liked ? x.likes - 1 : x.likes + 1 } : x));
+  const openPost = post => { setSelectedPost(post); setScreen("detail"); };
+  const openProfile = id => { setProfileId(id); setScreen("profile"); };
+
+  const nav = s => { setScreen(s); };
+
+  const wrap = (content) => (
+    <div style={{ maxWidth: 480, margin: "0 auto", minHeight: "100vh", background: "#0D0D0D", color: "#F0EDE8", position: "relative" }}>
+      {content}
+      {["feed","explore","post","myprofile"].includes(screen) && <BottomNav active={screen} onNav={nav} />}
+    </div>
+  );
+
+  if (screen === "onboarding") return wrap(<Onboarding onDone={u => { setUser(u); setScreen("feed"); }} />);
+
+  if (screen === "feed") return wrap(
+    <div style={{ paddingBottom: 80 }}>
+      <div style={{ padding: "44px 20px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <div style={{ fontSize: 9, letterSpacing: 5, color: "#555", fontFamily: "sans-serif" }}>YOUR FEED</div>
+          <div style={{ fontSize: 30, letterSpacing: -1 }}>PASHION</div>
+        </div>
+        <div onClick={() => nav("myprofile")} style={{ cursor: "pointer" }}><Avatar emoji={user?.avatar} size={40} ring /></div>
+      </div>
+      {posts.map((post, i) => <PostCard key={post.id} post={post} idx={i} onLike={toggleLike} onOpen={() => openPost(post)} onProfile={openProfile} />)}
+    </div>
+  );
+
+  if (screen === "explore") return wrap(
+    <div style={{ paddingBottom: 80 }}>
+      <div style={{ padding: "44px 16px 16px" }}>
+        <div style={{ fontSize: 9, color: "#555", letterSpacing: 4, fontFamily: "sans-serif", marginBottom: 4 }}>ENTDECKEN</div>
+        <div style={{ fontSize: 28, marginBottom: 16 }}>Explore</div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: "0 2px" }}>
+        {posts.map(post => (
+          <div key={post.id} onClick={() => openPost(post)} style={{ cursor: "pointer", position: "relative" }}>
+            <img src={post.image} alt="" style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block" }} />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(transparent,rgba(13,13,13,0.85))", padding: "20px 8px 8px" }}>
+              <div style={{ fontSize: 9, fontFamily: "sans-serif", color: "#ddd" }}>{post.userName}</div>
+              <div style={{ fontSize: 9, fontFamily: "sans-serif", color: "#888" }}>{post.items.reduce((s,i)=>s+parseInt(i.price),0)}€</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (screen === "post") return wrap(
+    <PostCreator user={user} onPublish={p => { setPosts(prev => [p, ...prev]); nav("feed"); }} onBack={() => nav("feed")} />
+  );
+
+  if (screen === "detail" && selectedPost) {
+    const post = posts.find(p => p.id === selectedPost.id) || selectedPost;
+    const total = post.items.reduce((s,i)=>s+parseInt(i.price),0);
+    return wrap(
+      <div style={{ paddingBottom: 40, animation: "fadeIn 0.3s ease" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "44px 16px 12px" }}>
+          <button onClick={() => nav("feed")} style={{ background: "none", border: "none", color: "#888", fontSize: 22, cursor: "pointer" }}>←</button>
+          <div onClick={() => openProfile(post.userId)} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <Avatar emoji={post.userAvatar} size={36} />
+            <div>
+              <div style={{ fontSize: 13 }}>{post.userName}</div>
+              <div style={{ fontSize: 10, color: "#555", fontFamily: "sans-serif" }}>@{post.userId}</div>
+            </div>
+          </div>
+        </div>
+        <img src={post.image} alt="" style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover" }} />
+        <div style={{ padding: 16 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>{post.tags.map(t => <span key={t} style={{ fontSize: 11, color: "#888", fontFamily: "sans-serif" }}>{t}</span>)}</div>
+          <div style={{ fontSize: 15, lineHeight: 1.5, marginBottom: 20 }}>{post.caption}</div>
+          <div style={{ fontSize: 9, color: "#555", letterSpacing: 3, fontFamily: "sans-serif", marginBottom: 14 }}>DAS TRÄGT {post.userName.toUpperCase()}</div>
+          {post.items.map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: 14, background: "#111", borderRadius: 14, marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 26 }}>{item.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 13 }}>{item.name}</div>
+                  <div style={{ fontSize: 10, color: "#666", fontFamily: "sans-serif" }}>{item.store}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 13, fontFamily: "sans-serif" }}>{item.price}€</span>
+                <a href={item.link} style={{ background: "#F0EDE8", color: "#0D0D0D", borderRadius: 8, padding: "6px 12px", fontSize: 9, fontFamily: "sans-serif", letterSpacing: 1.5, textDecoration: "none" }}>KAUFEN</a>
+              </div>
+            </div>
+          ))}
+          <button style={{ width: "100%", marginTop: 8, padding: 15, background: "#F0EDE8", color: "#0D0D0D", border: "none", borderRadius: 12, fontSize: 10, fontFamily: "sans-serif", letterSpacing: 2, cursor: "pointer" }}>
+            GANZEN LOOK KAUFEN · {total}€
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16 }}>
+            <button onClick={() => toggleLike(post.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 8, color: post.liked ? "#e8507a" : "#555" }}>
+              <span style={{ fontSize: 24 }}>{post.liked ? "♥" : "♡"}</span>
+              <span style={{ fontSize: 13, fontFamily: "sans-serif" }}>{post.likes} Likes</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "profile") return wrap(
+    <Profile userId={profileId} posts={posts} currentUser={user} onPost={openPost} onBack={() => nav("feed")} onNav={nav} />
+  );
+
+  if (screen === "myprofile") return wrap(
+    <Profile userId={user?.username} posts={posts} currentUser={user} onPost={openPost} onBack={() => nav("feed")} onNav={nav} isOwn />
+  );
+
+  return wrap(<div />);
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
